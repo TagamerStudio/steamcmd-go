@@ -176,7 +176,7 @@ func TestArchiveTraversalLinksAndFailedInstallPreserveOld(t *testing.T) {
 	if err := os.MkdirAll(steamDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	oldPath := filepath.Join(steamDir, "steamcmd.sh")
+	oldPath := filepath.Join(steamDir, "old-marker")
 	if err := os.WriteFile(oldPath, []byte("old"), 0o644); err != nil {
 		t.Fatal(err)
 	}

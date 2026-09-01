@@ -488,8 +488,10 @@ func TestEntrypointAndInstallDirectoryChecks(t *testing.T) {
 	if err := os.WriteFile(entrypoint, []byte("script"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if valid, err := client.validEntrypoint(); err != nil || valid {
-		t.Fatalf("non-executable entrypoint = %t, %v", valid, err)
+	if runtime.GOOS != "windows" {
+		if valid, err := client.validEntrypoint(); err != nil || valid {
+			t.Fatalf("non-executable entrypoint = %t, %v", valid, err)
+		}
 	}
 	if err := os.Remove(entrypoint); err != nil {
 		t.Fatal(err)

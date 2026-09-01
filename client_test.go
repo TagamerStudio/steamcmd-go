@@ -998,6 +998,27 @@ func TestUpdateAndBuildIDErrorPaths(t *testing.T) {
 		t.Fatalf("invalid manifest = %q, %v", installed, err)
 	}
 
+	oldReadInstallFile := readInstallFile
+	t.Cleanup(func() { readInstallFile = oldReadInstallFile })
+	readInstallFile = func(string) ([]byte, error) { return nil, errors.New("manifest read failure") }
+	if _, err := invalidManifestClient.InstalledBuildID("123"); err == nil {
+		t.Fatal("manifest read failure was ignored")
+	}
+	readInstallFile = oldReadInstallFile
+
+	oldInstallLstat := installLstat
+	t.Cleanup(func() { installLstat = oldInstallLstat })
+	installLstat = func(path string) (os.FileInfo, error) {
+		if path == invalidManifestClient.installDir {
+			return nil, errors.New("install directory inspection failure")
+		}
+		return oldInstallLstat(path)
+	}
+	if _, err := invalidManifestClient.InstalledBuildID("123"); err == nil {
+		t.Fatal("install directory inspection failure was ignored")
+	}
+	installLstat = oldInstallLstat
+
 	fileInstallDir := filepath.Join(root, "file-install")
 	if err := os.WriteFile(fileInstallDir, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)

@@ -39,6 +39,7 @@ var (
 	installMkdirTemp = os.MkdirTemp
 	installRename    = os.Rename
 	installChmod     = os.Chmod
+	readInstallFile  = os.ReadFile
 	installDownload  = func(c *Client, ctx context.Context, destination string) error {
 		return c.downloadWithRetries(ctx, destination)
 	}
@@ -422,7 +423,7 @@ func (c *Client) validEntrypoint() (bool, error) {
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
 		return false, nil
 	}
-	if c.platform == PlatformLinux && info.Mode()&0o111 == 0 {
+	if c.platform == PlatformLinux && runtime.GOOS != "windows" && info.Mode()&0o111 == 0 {
 		return false, nil
 	}
 	return true, nil
@@ -672,8 +673,15 @@ func (c *Client) InstalledBuildID(appID string) (string, error) {
 }
 
 func (c *Client) installedBuildIDLocked(appID string) (string, error) {
+	if info, err := installLstat(c.installDir); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return "", errors.New("InstallDir is not a real directory")
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("inspect InstallDir: %w", err)
+	}
 	manifest := filepath.Join(c.installDir, "steamapps", "appmanifest_"+appID+".acf")
-	data, err := os.ReadFile(manifest)
+	data, err := readInstallFile(manifest)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return "", nil

@@ -1,0 +1,12 @@
+# Build output
+/bin/
+*.test
+*.out
+
+# Coverage and local tooling
+coverage.out
+.golangci-lint-cache/
+
+# Editor and operating-system files
+.DS_Store
+*.swp

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lint, test, and coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26.7"
+          cache: true
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: v2.12.2
+          github-token: ""
+          args: --config .golangci.yml --timeout 5m ./...
+      - run: go mod verify
+      - run: go vet ./...
+      - run: go test -count=1 -race ./...
+      - name: Collect coverage
+        run: go test -count=1 -covermode=atomic -coverprofile=coverage.out ./...
+      - name: Enforce coverage
+        run: |
+          go tool cover -func=coverage.out | tee -a "$GITHUB_STEP_SUMMARY"
+          go tool cover -func=coverage.out | grep -E 'total:.*100\.0%'
+      - name: Build Linux
+        run: go build ./...
+      - name: Cross-build Windows
+        run: GOOS=windows CGO_ENABLED=0 go build ./...
+      - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
+        if: github.event_name == 'push'
+        with:
+          files: coverage.out
+          token: ${{ secrets.CODECOV_TOKEN }}
+          version: v11.3.1
+
+  windows:
+    name: Test on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26.7"
+          cache: true
+      - run: go mod verify
+      - run: go vet ./...
+      - run: go test -count=1 ./...
+      - run: go build ./...
+
+  govulncheck:
+    name: Vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: "1.26.7"
+          cache: true
+      - name: Verify modules
+        run: go mod verify
+      - name: Run govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+        env:
+          GOTOOLCHAIN: local

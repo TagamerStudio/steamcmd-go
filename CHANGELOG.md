@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-29
+
+### Security
+
+- Add a security policy and enable private vulnerability reporting.
+- Add CodeQL analysis and scheduled fuzzing for build ID and archive-name
+  parsing.
+
+### Changed
+
+- Add weekly Dependabot updates for Go modules and GitHub Actions.
+- Add a tag-driven release workflow that validates the changelog and tag before
+  publishing.
+
 ## [0.1.2] - 2026-09-01
 
 ### Fixed
